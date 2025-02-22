@@ -17,7 +17,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('status')->default('pending');
             $table->string('priority')->default('low');
-            $table->string('assignee')->foreignId('user_id')->constrained();
+            $table->string('assignee')->foreignId('user_id')->constrained()->default('user_id');
             $table->date('due_date')->nullable();
             $table->date('reminder_date')->nullable();
             $table->boolean('is_completed')->default(false);

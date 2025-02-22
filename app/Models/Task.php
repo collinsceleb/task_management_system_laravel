@@ -16,6 +16,8 @@ class Task extends Model
         'description',
         'status',
         'priority',
+        'user_id',
+        'assignee',
     ];
 
     /**
@@ -29,5 +31,10 @@ class Task extends Model
             'status' => TaskStatus::class,
             'priority' => TaskPriority::class,
         ];
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
