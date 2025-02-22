@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
-    private const VALIDATION_RULE = 'required|string';
     /**
      * Display a listing of the resource.
      */
