@@ -297,7 +297,7 @@ class TaskController extends Controller
             log::info('Task: ' . $task);
 
             $request->validate([
-                'assigned_to' => 'required|exists:users,id', // Ensure valid user ID
+                'assigned_to' => 'required|exists:users,id',
             ]);
 
             if (!$task) {
