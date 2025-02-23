@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
+    const TASKS_RETRIEVED_SUCCESSFULLY = 'Tasks retrieved successfully';
+
     /**
      * Display a listing of the resource.
      */
@@ -18,7 +20,7 @@ class TaskController extends Controller
         $tasks = Task::where('user_id', $user->id)->get();
         return response()->json([
             'success' => true,
-            'message' => 'Tasks retrieved successfully',
+            'message' => self::TASKS_RETRIEVED_SUCCESSFULLY,
             'data' => $tasks,
         ], 200);
     }
@@ -36,7 +38,6 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
-
         try {
             $user = $request->user();
             $request->validate([
@@ -51,35 +52,41 @@ class TaskController extends Controller
             Log::info('User: ' . $user);
 
             if (!$user->id) {
-                return response()->json(['message' => 'Unauthorized'], 401);
+                $response = ['message' => 'Unauthorized'];
+                $status = 401;
+            } elseif (!$user->role == 'admin' || !$user->role == 'manager') {
+                $response = ['error' => 'Unauthorized to create task'];
+                $status = 403;
+            } else {
+                $taskData = [
+                    'user_id' => $user->id,
+                    'title' => $request->title,
+                    'description' => $request->description,
+                    'priority' => $request->priority,
+                    'status' => $request->status,
+                    'due_date' => $request->due_date,
+                ];
+
+                Log::info('Task Data Before Insert:', $taskData);
+
+                $task = Task::create($taskData);
+
+                $response = [
+                    'success' => true,
+                    'message' => 'Task created successfully',
+                    'data' => $task,
+                ];
+                $status = 201;
             }
-
-            $taskData = [
-                'user_id' => $user->id,
-                'title' => $request->title,
-                'description' => $request->description,
-                'priority' => $request->priority,
-                'status' => $request->status,
-                'due_date' => $request->due_date,
-                'assignee' => $user->id,
-            ];
-
-            Log::info('Task Data Before Insert:', $taskData);
-
-
-            $task = Task::create($taskData);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Task created successfully',
-                'data' => $task,
-            ], 201);
         } catch (\Exception $e) {
-            return response()->json([
+            $response = [
                 'success' => false,
                 'message' => 'Failed to create task: ' . $e->getMessage(),
-            ], 500);
+            ];
+            $status = 500;
         }
+
+        return response()->json($response, $status);
     }
     /**
      * Display the specified resource.
@@ -115,28 +122,33 @@ class TaskController extends Controller
             ]);
 
             if (!$user->id) {
-                return response()->json(['message' => 'Unauthorized'], 401);
+                $response = ['message' => 'Unauthorized'];
+                $status = 401;
+            } else {
+                $task = Task::where('user_id', $user->id)->where('id', $id)->first();
+
+                if (!$task) {
+                    $response = ['message' => 'Task not found'];
+                    $status = 404;
+                } else {
+                    $task->update($request->all());
+                    $response = [
+                        'success' => true,
+                        'message' => 'Task updated successfully',
+                        'data' => $task,
+                    ];
+                    $status = 200;
+                }
             }
-
-            $task = Task::where('user_id', $user->id)->where('id', $id)->first();
-
-            if (!$task) {
-                return response()->json(['message' => 'Task not found'], 404);
-            }
-
-            $task->update($request->all());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Task updated successfully',
-                'data' => $task,
-            ], 200);
         } catch (\Exception $e) {
-            return response()->json([
+            $response = [
                 'success' => false,
                 'message' => 'Failed to update task: ' . $e->getMessage(),
-            ], 500);
+            ];
+            $status = 500;
         }
+
+        return response()->json($response, $status);
     }
 
     /**
@@ -149,24 +161,28 @@ class TaskController extends Controller
             $task = Task::where('user_id', $user->id)->where('id', $id)->first();
 
             if (!$user->id) {
-                return response()->json(['message' => 'Unauthorized'], 401);
+                $response = ['message' => 'Unauthorized'];
+                $status = 401;
+            } elseif (!$task) {
+                $response = ['message' => 'Task not found'];
+                $status = 404;
+            } else {
+                $task->delete();
+                $response = [
+                    'success' => true,
+                    'message' => 'Task deleted successfully',
+                ];
+                $status = 200;
             }
-            if (!$task) {
-                return response()->json(['message' => 'Task not found'], 404);
-            }
-
-            $task->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Task deleted successfully',
-            ], 200);
         } catch (\Exception $e) {
-            return response()->json([
+            $response = [
                 'success' => false,
                 'message' => 'Failed to delete task: ' . $e->getMessage(),
-            ], 500);
+            ];
+            $status = 500;
         }
+
+        return response()->json($response, $status);
     }
 
     public function getTasksByStatus(Request $request, $status)
@@ -176,7 +192,7 @@ class TaskController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Tasks retrieved successfully',
+            'message' => self::TASKS_RETRIEVED_SUCCESSFULLY,
             'data' => $tasks,
         ], 200);
     }
@@ -273,29 +289,42 @@ class TaskController extends Controller
         }
     }
 
-    public function assignTaskToUser(Request $request, $id, $userId)
+    public function assignTask(Request $request, $taskId)
     {
         try {
             $user = $request->user();
-            $task = Task::where('user_id', $user->id)->where('id', $id)->first();
+            $task = Task::findOrFail($taskId)->where('user_id', $user->id)->where('id', $taskId)->first();
+            log::info('Task: ' . $task);
+
+            $request->validate([
+                'assigned_to' => 'required|exists:users,id', // Ensure valid user ID
+            ]);
 
             if (!$task) {
-                return response()->json(['message' => 'Task not found'], 404);
+                $response = ['message' => 'Task not found'];
+                $status = 404;
+            } elseif (!$user->isAdmin() && !$user->isManager()) {
+                $response = ['error' => 'Unauthorized to assign tasks'];
+                $status = 403;
+            } else {
+                $task->assigned_to = $request->assigned_to;
+                $task->assignee = $user->id;
+                $task->save();
+                $response = [
+                    'success' => true,
+                    'message' => 'Task assigned to user successfully',
+                    'data' => $task,
+                ];
+                $status = 200;
             }
-
-            $task->assigned_to = $userId;
-            $task->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Task assigned to user successfully',
-                'data' => $task,
-            ], 200);
         } catch (\Exception $e) {
-            return response()->json([
+            $response = [
                 'success' => false,
                 'message' => 'Failed to assign task to user: ' . $e->getMessage(),
-            ], 500);
+            ];
+            $status = 500;
         }
+
+        return response()->json($response, $status);
     }
 }
