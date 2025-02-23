@@ -18,6 +18,8 @@ class Task extends Model
         'priority',
         'user_id',
         'assignee',
+        'assigned_to',
+        'due_date',
     ];
 
     /**
@@ -36,5 +38,20 @@ class Task extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function assigneeUser()
+    {
+        return $this->belongsTo(User::class, 'assignee');
+    }
+
+    public function assignedTo()
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -23,7 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'username'
+        'username',
+        'role',
     ];
 
     /**
@@ -52,5 +52,31 @@ class User extends Authenticatable
     public function tasks()
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function createdTasks()
+    {
+        return $this->hasMany(Task::class, 'user_id');
+    }
+
+
+    public function assignedTasks()
+    {
+        return $this->hasMany(Task::class, 'assignee');
+    }
+
+    public function receivedTasks()
+    {
+        return $this->hasMany(Task::class, 'assigned_to');
+    }
+
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isManager()
+    {
+        return $this->role === 'manager';
     }
 }
