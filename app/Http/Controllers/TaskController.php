@@ -91,9 +91,35 @@ class TaskController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, $userId)
     {
-        //
+        try {
+            $user = $request->user();
+            $tasks = Task::where('assigned_to', $userId)->get();
+
+            if ($user->role !== 'admin' && $user->role !== 'manager' && $user->id !== $userId) {
+                $response = ['error' => 'Unauthorized to view tasks'];
+                $status = 401;
+            } elseif (!$tasks) {
+                $response = ['message' => 'Task not found'];
+                $status = 404;
+            } else {
+                $response = [
+                    'success' => true,
+                    'message' => 'Task retrieved successfully',
+                    'data' => $tasks,
+                ];
+                $status = 200;
+            }
+        } catch (\Exception $e) {
+            $response = [
+                'success' => false,
+                'message' => 'Failed to retrieve task: ' . $e->getMessage(),
+            ];
+            $status = 500;
+        }
+
+        return response()->json($response, $status);
     }
 
     /**
