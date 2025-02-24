@@ -16,13 +16,29 @@ class TaskController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user();
-        $tasks = Task::where('user_id', $user->id)->get();
-        return response()->json([
-            'success' => true,
-            'message' => self::TASKS_RETRIEVED_SUCCESSFULLY,
-            'data' => $tasks,
-        ], 200);
+        try {
+            $user = $request->user();
+            $tasks = Task::where('user_id', $user->id)->get();
+            Log::info('User: ' . $user);
+            Log::info('Tasks: ' . $tasks);
+            if (!$user->id) {
+                $response = ['message' => 'Unauthorized'];
+                $status = 401;
+            } elseif ($user->isAdmin() || $user->isManager()) {
+                $response = $tasks;
+                $status = 200;
+            } else {
+                $response = ['error' => 'Unauthorized to view tasks'];
+                $status = 403;
+            }
+        } catch (\Exception $e) {
+            $response = [
+                'success' => false,
+                'message' => 'Failed to retrieve tasks: ' . $e->getMessage(),
+            ];
+            $status = 500;
+        }
+        return response()->json($response, $status);
     }
 
     /**
@@ -97,18 +113,14 @@ class TaskController extends Controller
             $user = $request->user();
             $tasks = Task::where('assigned_to', $userId)->get();
 
-            if ($user->role !== 'admin' && $user->role !== 'manager' && $user->id !== $userId) {
+            if (!$user->role == 'admin' && !$user->role == 'manager') {
                 $response = ['error' => 'Unauthorized to view tasks'];
                 $status = 401;
             } elseif (!$tasks) {
                 $response = ['message' => 'Task not found'];
                 $status = 404;
-            } else {
-                $response = [
-                    'success' => true,
-                    'message' => 'Task retrieved successfully',
-                    'data' => $tasks,
-                ];
+            } elseif ($user->role == 'user' && $user->id == $userId ) {
+                $response = $tasks;
                 $status = 200;
             }
         } catch (\Exception $e) {
@@ -211,30 +223,6 @@ class TaskController extends Controller
         return response()->json($response, $status);
     }
 
-    public function getTasksByStatus(Request $request, $status)
-    {
-        $user = $request->user();
-        $tasks = Task::where('user_id', $user->id)->where('status', $status)->get();
-
-        return response()->json([
-            'success' => true,
-            'message' => self::TASKS_RETRIEVED_SUCCESSFULLY,
-            'data' => $tasks,
-        ], 200);
-    }
-
-    public function getTasksByPriority(Request $request, $priority)
-    {
-        $user = $request->user();
-        $tasks = Task::where('user_id', $user->id)->where('priority', $priority)->get();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Tasks retrieved successfully',
-            'data' => $tasks,
-        ], 200);
-    }
-
     public function markTaskAsCompleted(Request $request, $id)
     {
 
@@ -263,57 +251,6 @@ class TaskController extends Controller
         }
     }
 
-    public function changeTaskStatus(Request $request, $id, $status)
-    {
-        try {
-            $user = $request->user();
-            $task = Task::where('user_id', $user->id)->where('id', $id)->first();
-
-            if (!$task) {
-                return response()->json(['message' => 'Task not found'], 404);
-            }
-
-            $task->status = $status;
-            $task->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Task status updated successfully',
-                'data' => $task,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update task status: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function changeTaskPriority(Request $request, $id, $priority)
-    {
-        try {
-            $user = $request->user();
-            $task = Task::where('user_id', $user->id)->where('id', $id)->first();
-
-            if (!$task) {
-                return response()->json(['message' => 'Task not found'], 404);
-            }
-
-            $task->priority = $priority;
-            $task->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Task priority updated successfully',
-                'data' => $task,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update task priority: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
 
     public function assignTask(Request $request, $taskId)
     {
@@ -347,6 +284,33 @@ class TaskController extends Controller
             $response = [
                 'success' => false,
                 'message' => 'Failed to assign task to user: ' . $e->getMessage(),
+            ];
+            $status = 500;
+        }
+
+        return response()->json($response, $status);
+    }
+
+    public function getTaskById(Request $request, $taskId)
+    {
+        try {
+            $user = $request->user();
+            $task = Task::where('user_id', $user->id)->where('id', $taskId)->first();
+
+            if (!$user->id) {
+                $response = ['message' => 'Unauthorized'];
+                $status = 401;
+            } elseif (!$task) {
+                $response = ['message' => 'Task not found'];
+                $status = 404;
+            } else {
+                $response = $task;
+                $status = 200;
+            }
+        } catch (\Exception $e) {
+            $response = [
+                'success' => false,
+                'message' => 'Failed to retrieve task: ' . $e->getMessage(),
             ];
             $status = 500;
         }
