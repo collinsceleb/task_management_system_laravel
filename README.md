@@ -14,13 +14,18 @@ cp .env.example .env
 Update the database credentials in .env:
 
 i. DB_CONNECTION=mysql
+
 ii. DB_HOST=127.0.0.1
+
 iii. DB_PORT=3306
+
 iv. DB_DATABASE=your_database
+
 v. DB_USERNAME=your_username
+
 vi. DB_PASSWORD=your_password
 
-Run migrations and seed database:  
+Run migrations and seed database:   
 php artisan migrate --seed
 
 Start the server
