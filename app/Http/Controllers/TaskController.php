@@ -119,18 +119,17 @@ class TaskController extends Controller
             } elseif (!$tasks) {
                 $response = ['message' => 'Task not found'];
                 $status = 404;
-            } elseif ($user->role == 'user' && $user->id == $userId ) {
+            } elseif ($user->role == 'user' && $user->id == $userId) {
                 $response = $tasks;
                 $status = 200;
             }
         } catch (\Exception $e) {
             $response = [
                 'success' => false,
-                'message' => 'Failed to retrieve task: ' . $e->getMessage(),
+                'message' => 'Failed to retrieve tasks: ' . $e->getMessage(),
             ];
             $status = 500;
         }
-
         return response()->json($response, $status);
     }
 
