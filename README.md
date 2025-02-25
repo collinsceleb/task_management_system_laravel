@@ -1,7 +1,7 @@
 # task_management_system_laravel
 
 
-git clone https://github.com/your-repo/task-management-laravel.git
+git clone https://github.com/collinsceleb/task_management_system_laravel
 
 cd task-management-laravel
 
